@@ -1,0 +1,39 @@
+{
+	"source": {
+		"java": [
+			"frameworks/base",
+			"frameworks/multidex",
+			"libcore/luni",
+			"libcore/ojluni",
+			"libcore/dalvik",
+			"libcore/libart",
+			"libcore/dex"
+		],
+		"javaSpec": [
+		],
+		"javaIgnore": [
+			"frameworks/base/tools"
+		],
+		"aidl": [],
+		"native": [
+			"frameworks/base",
+			"frameworks/av",
+			"libcore/"
+		],
+		"nativeIgnore": [
+		],
+		"nativeSpec": [
+			"frameworks/base/include",
+			"frameworks/base/libs",
+			"frameworks/native/include",
+			"frameworks/native/libs",
+			"frameworks/native/opengl/include",
+			"frameworks/native/opengl/libagl",
+			"frameworks/native/opengl/libs",
+			"frameworks/native/services",
+			"frameworks/native/vulkan/include",
+			"frameworks/native/vulkan/libvulkan",
+			"libnativehelper/include"
+		]
+	}
+}

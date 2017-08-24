@@ -1,0 +1,129 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+group 'pub.fury'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+
+repositories {
+	mavenCentral()
+}
+
+sourceSets {
+	main {
+		java.srcDirs = getJavaSrcs()
+	}
+}
+
+dependencies {
+//    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+static String getAospRoot() {
+	return '/Volumes/android/aosp/'
+}
+
+static String getProjRoot() {
+	return '/Volumes/android/aosp-reader/'
+}
+
+def getJavaSrcs() {
+	def source = new JsonSlurper().parse(new File(project.rootDir.absolutePath + '/source.json'))
+	Set<File> result = sourceSets.main.java.srcDirs
+	Set<File> javaIgnore = source.source.javaIgnore
+	
+	def javaSpec = source.source.javaSpec
+	for (int i = 0; i < javaSpec.size(); i++) {
+		File javaDir = new File(getAospRoot() + javaSpec[i])
+		if (javaDir.exists() && javaDir.isDirectory()) {
+			result.add(javaDir.absolutePath)
+		}
+	}
+	def java = source.source.java
+	for (int i = 0; i < java.size(); i++) {
+		File javaDir = new File(getAospRoot() + java[i])
+		searchJavaSrcsRecurse(javaDir, result, javaIgnore)
+	}
+//	result.add(projectDir.absolutePath + '/src/main/java')
+	return result
+}
+
+def void searchJavaSrcsRecurse(File javaDir, Set<File> result, Set<File> ignores) {
+	File[] subDirs = javaDir.listFiles(new FileFilter() {
+		@Override
+		boolean accept(File pathname) {
+			return pathname.isDirectory()
+		}
+	})
+	if (subDirs.size() <= 0) {
+		return
+	}
+	for (int i = 0; i < subDirs.size(); i++) {
+		File subDir = subDirs[i]
+		File[] javaFiles = subDir.listFiles(new FileFilter() {
+			@Override
+			boolean accept(File pathname) {
+				return pathname.absolutePath.endsWith(".java")
+			}
+		})
+		
+		if (javaFiles.size() > 0) {
+			// try get first package name
+			File firstJavaFile = javaFiles[0]
+			String packageName = ''
+			firstJavaFile.eachLine { line ->
+				if (line.startsWith("package ") && line.endsWith(";")) {
+					packageName = line.replace('package ', '').replace(';', '')
+//					println "get pkgName : $packageName"
+				}
+			}
+			String endsWith = "${packageName.replace('.', '/')}/${firstJavaFile.name}"
+//			println "filePath:$firstJavaFile.absolutePath\nendsWith:$endsWith"
+			if (packageName != '' && firstJavaFile.absolutePath.endsWith(endsWith)) {
+				def removed = firstJavaFile.absolutePath.replace(endsWith, '')
+//				println "removed:$removed"
+				if (!removed.contains('Test') && !removed.contains('test') && !removed.contains('tests') && !removed.contains('Tests')) {
+					addNoDuplicate(result, removed, ignores)
+				}
+			}
+		} else {
+			searchJavaSrcsRecurse(subDir, result, ignores)
+		}
+	}
+}
+
+static void addNoDuplicate(Set<File> result, String path, Set<File> ignores) {
+//	println "ADD-No:${path}"
+	def ignore = false
+	ignores.each { ig ->
+		def ignorePath = getAospRoot() + ig
+		if (ignorePath == path || path.startsWith(ignorePath)) {
+			ignore = true
+		}
+	}
+	if (ignore) {
+		return
+	}
+	def exist = false
+	result.each { resultItem ->
+		String p = resultItem
+		if (path.startsWith(p)) {
+			exist = true
+		}
+	}
+	if (!exist) {
+//		println "ADD-DIR:${path}"
+		result.add(path)
+	}
+}
+
+task testGetJavaSrcs() {
+	doLast {
+		getJavaSrcs().each {
+			println it
+		}
+	}
+}
